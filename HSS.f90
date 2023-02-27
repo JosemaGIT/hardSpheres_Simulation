@@ -14,54 +14,98 @@ program HSS
 !
 !------------------------------------------------------------------------------------------------------
     implicit none
-    real, dimension(:,:), allocatable :: r,v
-    !These will be the position (r) and velocity (v) matrixes. The first index indicates which particle 
-    !are we considering while the second indicates the x and y component of the magnitude.
+    
 
+    !--------------------------------------------------------------------------------------------------
+    real, dimension(:,:), allocatable :: r,v
+
+    !r = Position Matrix.
+    !v = Velocity Matrix.
+    !
+    !First Index indicates which particle we are considering.
+    !Second Index indicates the (x or y) componet we are considering.
+    
     real, dimension(:), allocatable :: t_col
-    !The minimum time value for each particle for the next collision, 
+    
+    !t_col = The minimum time value for each particle for the next collision.
+    !
+    !
+    !The index indicates which particle we are considering
 
     real, dimension(2) :: Rij, Vij
 
-    !Difference vectors
+    !Rij = r(i,:)-r(j,:)
+    !Vij = v(i,:)-v(j,:)
+    !
+    !
+    !Difference between postion and velocity vectors
 
     integer, dimension(3) :: boundary
 
-    !boundary is an identification of wich particle reaches a boundary and what boundary is 
-    !reached 
+    !boundary(1) = Index of the particle reaching the boundary
+    !boundary(2) = Type of boundary (x == 1 or y==2 direction)
+    !boundary(3) = Type of boundary (Plus==1 or Minus==-1)
+    !
+    !
+    !Identification of the boundary reached.
 
-    real :: L, t_sym, t, sigma,b, Mod_Rij, Mod_Vij, t_cont, t_step, treal_col
-    !L is the length of our squared well, t_sym will be the time at wich our simulation 
-    !is currently running, t is time dummy variable, sigma the diameters of the spheres,
-    !b is a parameter that tells us if the collision is going to take place, ModRij and 
-    !ModVij are the modulus of the difference vectors, time of the arrival to the boundary,
-    !t_step is the time you have to add for the next step, treal_col is the
-    !minimal value of the collision times, 
+    real :: L, sigma, t_sym, t, b, Mod_Rij, Mod_Vij, t_bound, t_real_col, t_step
+
+    !L          = Length of the square well side
+    !sigma      = Diameter of the spheres
+    !t_sym      = Time at which our simulation is running (Set to 0 at the beginning of the simulation)
+    !t          = Dummy variable, to calculate a particular time of collision between to particles
+    !b          = Parameter that tells us if the collision is going to take place
+    !ModRij     = Modulus of a particular Rij
+    !ModVij     = Modulus of a particular Vij
+    !t_bound    = Minimum time when a particular particle reaches a boundary
+    !t_real_col = Minimum time of collision between particles
+    !t_step     = Time that will pass to get to the next step
+    !
+    !
+    !Real values that will be used in our simulation
 
     integer, dimension(:), allocatable :: partner
-    !partner is the partner of collision of each particle
+    !partner(i) = Index of the particle colliding with the i-particle.
+    !
+    !
+    !Used to be able to identificate whiche particles have collided.
 
-    integer :: n,m,i,j,k,part_col, real_partner, updown
+    integer :: n,m, i,j,k, updown, part_col, real_partner
     !n=number of particles, m=number of collisions, i,j,k=dummy variables, 
     !part_col is the particle we will take into account, updown is a dummy 
     !variable to identify if you have reached the top or the bottom 
     !of the well
 
+    !n            = Number of particles
+    !m            = Number of collisions
+    !i,j,k        = Dummy loop variables
+    !updown       = Dummy variable to identify some parameters in the boundary collision.
+    !part_col     = Index of the particle colliding
+    !real_partner = Index of the partner of the particle colliding
+    !
+    !
+    !Integer values that will be used in our simulation.
+
+    !--------------------------------------------------------------------------------------------------
 
     t_sym=0 !Origin of time at 0
 
-    !! We'll first take the data from the parameters archive
+    !! Parameters taken from an external Archive.
+    
     open(10,file='parameters.dat')
+
     read(10,*) sigma
     read(10,*) L
     read(10,*) n
     read(10,*) m
+
     close(10)
 
-    ! And we'll use the parameter n to describe the legnth of our coordinate matrixes
-    allocate(r(1:n,1:2),v(1:n,1:2),t_col(1:n),partner(1:n))
     
-    !! We'll set our initial conditions
+    allocate(r(1:n,1:2),v(1:n,1:2),t_col(1:n),partner(1:n)) !We use 'n' to describe the length of our matrixex
+    
+    !! Initail conditions taken from another external Archive
     
     open(20,file='initial_conditions.dat')
 
@@ -71,101 +115,139 @@ program HSS
 
     close(20)
 
-    !!We now start the collisions
+    !!      COLLISIONS      !!
 
-    do k=1,m !Repeat for m collisions
+    do k=1,m !Repeat for m collisions 
         
-        !Renew the variable t_col and t_cont for the next collision
+        !Reset the variables for each collision
+        
         t_col=0
         partner=0
-        t_cont=0
+        t_bound=0
         boundary=[1,1,1]
-        !First let's see at what time does the particles
+
+        !! Boundary Conditions
+
         do i=1,n !Repeat for n particles
-            !4 Boundary Conditions
-            do j=1,2
-                if(v(i,j)>0) then
-                    t=(L-sigma-r(i,j))/v(i,j)
+
+            do j=1,2 !1 = x-direction ; 2 = y-direction
+
+                if(v(i,j)>0) then !Collision will take place at +x (or +y)
+
+                    t=(L-sigma/2-r(i,j))/v(i,j)
                     updown=1
-                else if(v(i,j)<0) then
-                    t=(sigma-r(i,j))/v(i,j)
+                
+                else if(v(i,j)<0) then !Collision will take place at -x (or -y)
+
+                    t=(sigma/2-r(i,j))/v(i,j)
                     updown=-1
+                    
                 end if
 
-                if(t_cont==0) then
-                    t_cont=t
-                    boundary(2)=j
-                    boundary(3)=updown
-                else if(t<t_cont) then
-                    t_cont=t
-                    boundary(1)=i
-                    boundary(2)=j
-                    boundary(3)=updown
+                if(t_bound==0) then !It's the first particle
+                
+                    t_bound=t
+                    boundary(2)=j               !We set if an x-type or y-type boundary
+                    boundary(3)=updown          !We set if it is an + or - type boundary
+                
+                else if(t<t_bound) then !Compare to the last particle taken into account
+
+                    t_bound=t
+                    boundary(1)=i               !We set the particle reaching the boundary
+                    boundary(2)=j               !We set if an x-type or y-type boundary
+                    boundary(3)=updown          !We set if it is an + or - type boundary
+                
                 end if
             end do
         end do
 
-        !Now we'll se the collision beetween each particle
+        !! Interactions between particles
 
         do i=1,n !Repeat for n particles
+
             do j=1,n !Collision with he n-1 particles
-                !Exclude itself from the calculus
-                if (i==j) then
+                
+                if (i==j) then !Exclude itself from the calculus
                     exit
                 end if
                 
-                !Calculate the data for the time
+                !Data needed to calculate the time at wich the collision takes place
 
-                Rij=r(j,:)-r(i,:)
-                Vij=v(j,:)-v(i,:)
+                Rij=r(i,:)-r(j,:)
+                Vij=v(i,:)-v(j,:)
                 Mod_Rij=norm2(Rij)
                 Mod_Vij=norm2(Vij)
                 b=dot_product(Rij,Vij)
                 
-                !Exclude particles going away from each other
 
-                if(b>0) then
+                if(b>0) then !Exclude particles going away from each other
+                    exit
+                else if(b**2-Mod_Vij**2*(Mod_Rij**2-sigma**2).le.0) then !Exclude particles not going to collide
                     exit
                 end if
 
-                !We calculate the time of the current collision
-                t=(-b-sqrt(b**2-Mod_Vij**2*(Mod_Rij**2-sigma**2)))/(Mod_Vij**2)
-                
-                !If it is the first value it sets t_col(i) to t
-                !If t is less than the last t_col(i) it sets it to t
-                !Else it leaves t_col(i) as it was
-                !It also indicates the partner of collision
+                !Time needed for this collision to take place
 
-                if(t_col(i)==0) then
-                    t_col(i)=t
-                    partner(i)=j
-                else if(t<t_col(i)) then
-                    t_col(i)=t
-                    partner(i)=j
+                t=(-b-sqrt(b**2-Mod_Vij**2*(Mod_Rij**2-sigma**2)))/(Mod_Vij**2)
+
+                if(t_col(i)==0) then !It's the first collision for the i-particle
+                    
+                    t_col(i)=t              !We set the time of the i-particle collision to t
+                    partner(i)=j            !We set the i-particle partner to j
+                
+                else if(t<t_col(i)) then !t is less than the last t_col calculated
+                
+                    t_col(i)=t              !We set the time of the i-particle collision to t
+                    partner(i)=j            !We set the i-particle partner to j
+                
                 end if
             end do
         end do
 
-        treal_col=minval(t_col)
-        part_col=minval(minloc(t_col))
-        real_partner=partner(part_col)
+        !! Find the real time needed to go to the next step
 
-        if (treal_col<t_cont) then
-            t_step=treal_col
-            r=r+v*t_step
+        !Minimal value of the collision
 
-            v(part_col,:)=v(part_col,:)-dot_product(v(part_col,:)-v(part_col,:),r(part_col,:)-r(part_col,:))
-            v(real_partner,:)=v(real_partner,:)-dot_product(v(real_partner,:)-v(real_partner,:),r(real_partner,:)-r(real_partner,:))
+        t_real_col=minval(t_col) !The value of the time
+        
+        part_col=minval(minloc(t_col)) !The i-particle we will take into acount 
+        !(We use minval here to turn the rank-1 value to rank-0 (Not sure if it can be done otherwise))
+
+        real_partner=partner(part_col) !We find the partner of the 'part_col'-particle
+
+        !Find if in this iteration a collision between particles or a collision with the boundaries takes place
+
+        if (t_real_col<t_bound) then !Collision between particles
             
-        else if (treal_col>t_cont) then
-            t_step=t_cont
+            t_step=t_real_col        !The next step will take place at t_real_col
+            r=r+v*t_step            !We move our particles to their positions at t_step
+            
+            b=dot_product(r(part_col,:)-r(real_partner,:),v(part_col,:)-v(real_partner,:))                      !Collision parameter
+
+            v(part_col,:)=v(part_col,:) - (r(part_col,:)-r(real_partner,:))*b/(sigma**2)                        !Collision results of v(i,:)
+            v(real_partner,:)=v(real_partner,:) + (r(part_col,:)-r(real_partner,:))*b/(sigma**2)                !Collision results of v(j,:)
+            
+        else if (t_real_col>t_bound) then !Collision with a boundary
+            
+            t_step=t_bound
             r=r+v*t_step
 
             v(boundary(1),boundary(2))=-v(boundary(1),boundary(2))
+        
         end if
 
 
         t_sym=t_sym+t_step
     end do
+
+    !! We save the results from the last collision in an external file
+
+    open(30,file="results.dat")
+
+    do i=1,n
+        write(20,*) v(i,1), v(i,2)
+    end do
+
+    close(20)
 
 end program HSS
