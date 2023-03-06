@@ -188,7 +188,7 @@ program HSS
 
                 !Time needed for this collision to take place
 
-                t=(-b-sqrt(b**2-Mod_Vij**2*(Mod_Rij**2-sigma**2)))/(Mod_Vij**2)
+                t=(-b-sqrt(b**2-Mod_Vij**2*(Mod_Rij**2-sigma**2)))/(Mod_Vij**2)     !!!! Tiemes t=NaN, don't know where the error comes from.
 
                 if(t_col(i).eq.0) then !It's the first collision for the i-particle
                     

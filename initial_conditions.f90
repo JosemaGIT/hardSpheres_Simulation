@@ -1,4 +1,16 @@
 program initial_conditions
+!------------------------------------------------------------------------------------------------------
+!   
+!   Initial Conditions for Hard Spheres Symulation
+!   Author: José Manuel Begines Sánchez
+!   This program will generate a grid of particles with random velocities in a square uniform
+!   distribution and the parameters needed to test the Hard Sphere Simulation (HSS).
+!
+!------------------------------------------------------------------------------------------------------
+
+
+
+
     implicit none
 
     real, dimension(:,:), allocatable :: r,v
@@ -35,8 +47,8 @@ program initial_conditions
 
     open(10,file='parameters.dat')
     
-    write(10,*) sigma
-    write(10,*) L
+    write(10,*) sigma !!!! Radius the hard spheres should have
+    write(10,*) L     !!!! Relative to the Length of the side of the well ??????
     write(10,*) n**2
     write(10,*) m
     
@@ -58,7 +70,7 @@ program initial_conditions
         call random_number(a)
         call random_number(b)
 
-        v(i,1)=a-0.5
+        v(i,1)=a-0.5 !!!! Velocidades que deberían tener las partículas ????????????
         v(i,2)=b-0.5
     end do
 
