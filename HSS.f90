@@ -121,9 +121,9 @@ program HSS
         
         !Reset the variables for each collision
         
-        t_col=0
+        t_col=10000
         partner=0
-        t_bound=0
+        t_bound=10000
         boundary=[1,1,1]
 
         !! Boundary Conditions
@@ -144,20 +144,14 @@ program HSS
                     
                 end if
 
-                if(t_bound.eq.0) then !It's the first particle
-                
-                    t_bound=t
-                    boundary(2)=j               !We set if an x-type or y-type boundary
-                    boundary(3)=updown          !We set if it is an + or - type boundary
-                
-                else if(t.lt.t_bound) then !Compare to the last particle taken into account
+                if(t.lt.t_bound) then !Compare to the last particle taken into account
 
                     t_bound=t
                     boundary(1)=i               !We set the particle reaching the boundary
                     boundary(2)=j               !We set if an x-type or y-type boundary
                     boundary(3)=updown          !We set if it is an + or - type boundary
                 
-                end if
+                 end if
             end do
         end do
 
@@ -190,16 +184,13 @@ program HSS
 
                 t=(-b-sqrt(b**2-Mod_Vij**2*(Mod_Rij**2-sigma**2)))/(Mod_Vij**2)     !!!! Tiemes t=NaN, don't know where the error comes from.
 
-                if(t_col(i).eq.0) then !It's the first collision for the i-particle
-                    
-                    t_col(i)=t              !We set the time of the i-particle collision to t
-                    partner(i)=j            !We set the i-particle partner to j
-                else if(t.lt.t_col(i)) then !t is less than the last t_col calculated
+                
+                if(t.lt.t_col(i)) then !t is less than the last t_col calculated
                 
                     t_col(i)=t              !We set the time of the i-particle collision to t
                     partner(i)=j            !We set the i-particle partner to j
                 
-                end if
+                 end if
             end do
         end do
 
@@ -225,14 +216,14 @@ program HSS
 
             v(part_col,:)=v(part_col,:) - (r(part_col,:)-r(real_partner,:))*b/(sigma**2)                        !Collision results of v(i,:)
             v(real_partner,:)=v(real_partner,:) + (r(part_col,:)-r(real_partner,:))*b/(sigma**2)                !Collision results of v(j,:)
-            
+ 
         else if (t_real_col.gt.t_bound) then !Collision with a boundary
             
             t_step=t_bound
             r=r+v*t_step
 
             v(boundary(1),boundary(2))=-v(boundary(1),boundary(2))
-        
+
         end if
 
 
@@ -248,6 +239,14 @@ program HSS
     end do
 
     close(30)
+
+    open(40,file="velocities.dat")
+
+    do i=1,n
+        write(40,*) norm2(v(i,:))
+    end do
+
+    close(40)
 
     deallocate(r,v,t_col,partner) !We deallocate the variables from the ram
 

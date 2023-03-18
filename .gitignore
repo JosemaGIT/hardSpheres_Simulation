@@ -4,3 +4,6 @@ initial_conditions.exe
 parameters.dat
 initial_conditions.dat
 results.dat
+velocities.dat
+histogram_script.gnu
+Histograms/
